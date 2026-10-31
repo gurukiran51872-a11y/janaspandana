@@ -1,0 +1,120 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
+             data.email is string && data.email.size() <= 150 &&
+             (!('phone' in data) || data.phone == null || (data.phone is string && data.phone.size() <= 30)) &&
+             (!('gramPanchayat' in data) || (data.gramPanchayat is string && data.gramPanchayat.size() <= 100)) &&
+             (!('fcmToken' in data) || data.fcmToken == null || (data.fcmToken is string && data.fcmToken.size() <= 1000)) &&
+             (!('fcmUpdatedAt' in data) || (data.fcmUpdatedAt is timestamp && data.fcmUpdatedAt <= request.time)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    function isValidGrievance(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.title is string && data.title.size() >= 3 && data.title.size() <= 200 &&
+             data.category is string && data.category.size() >= 2 && data.category.size() <= 100 &&
+             data.description is string && data.description.size() >= 5 && data.description.size() <= 2000 &&
+             data.status in ['Submitted', 'Pending', 'In Progress', 'Resolved'] &&
+             data.gramPanchayat is string && data.gramPanchayat.size() <= 100 &&
+             (!('id' in data) || (data.id is string && data.id.size() <= 64)) &&
+             (!('authorName' in data) || (data.authorName is string && data.authorName.size() <= 100)) &&
+             (!('authorEmail' in data) || (data.authorEmail is string && data.authorEmail.size() <= 150)) &&
+             (!('authorPhone' in data) || data.authorPhone == null || (data.authorPhone is string && data.authorPhone.size() <= 30)) &&
+             (!('authorVoterId' in data) || data.authorVoterId == null || (data.authorVoterId is string && data.authorVoterId.size() <= 50)) &&
+             (!('district' in data) || (data.district is string && data.district.size() <= 100)) &&
+             (!('taluk' in data) || (data.taluk is string && data.taluk.size() <= 100)) &&
+             (!('village' in data) || (data.village is string && data.village.size() <= 100)) &&
+             (!('wardNumber' in data) || (data.wardNumber is string && data.wardNumber.size() <= 100)) &&
+             (!('locationName' in data) || (data.locationName is string && data.locationName.size() <= 200)) &&
+             (!('gpsCoordinates' in data) || (data.gpsCoordinates is string && data.gpsCoordinates.size() <= 100)) &&
+             (!('mapImageUrl' in data) || (data.mapImageUrl is string && data.mapImageUrl.size() <= 1000)) &&
+             (!('isPublic' in data) || data.isPublic is bool) &&
+             (!('rating' in data) || data.rating == null || (data.rating is int && data.rating >= 1 && data.rating <= 5)) &&
+             (!('feedbackComment' in data) || data.feedbackComment == null || (data.feedbackComment is string && data.feedbackComment.size() <= 500)) &&
+             (!('assignedOfficer' in data) || (data.assignedOfficer is string && data.assignedOfficer.size() <= 100)) &&
+             (!('department' in data) || (data.department is string && data.department.size() <= 100)) &&
+             (!('expectedResolutionDate' in data) || (data.expectedResolutionDate is string && data.expectedResolutionDate.size() <= 100)) &&
+             (!('submittedDate' in data) || (data.submittedDate is string && data.submittedDate.size() <= 100)) &&
+             (!('evidencePhotoUri' in data) || data.evidencePhotoUri == null || (data.evidencePhotoUri is string && data.evidencePhotoUri.size() <= 1000)) &&
+             (!('titleKn' in data) || (data.titleKn is string && data.titleKn.size() <= 500)) &&
+             (!('categoryKn' in data) || (data.categoryKn is string && data.categoryKn.size() <= 200)) &&
+             (!('descriptionKn' in data) || (data.descriptionKn is string && data.descriptionKn.size() <= 4000)) &&
+             (!('timeline' in data) || (data.timeline is list && data.timeline.size() <= 20)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             (!('updatedAt' in data) || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    // Citizen User Profiles
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) &&
+                       incoming().userId == request.auth.uid &&
+                       isValidUserProfile(incoming());
+      allow update: if isOwner(userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'email', 'phone', 'gramPanchayat', 'updatedAt', 'fcmToken', 'fcmUpdatedAt']);
+      allow delete: if isOwner(userId);
+    }
+
+    // Grievances Collection
+    match /grievances/{grievanceId} {
+      allow get: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.isPublic == true);
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || resource.data.isPublic == true);
+      
+      allow create: if isSignedIn() &&
+                       isValidId(grievanceId) &&
+                       incoming().userId == request.auth.uid &&
+                       isValidGrievance(incoming());
+
+      allow update: if isSignedIn() &&
+                       isValidId(grievanceId) &&
+                       resource.data.userId == request.auth.uid &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidGrievance(incoming()) &&
+                       (
+                         // Action: Citizen submitting feedback/rating or reopening
+                         incoming().diff(existing()).affectedKeys().hasOnly(['rating', 'feedbackComment', 'status', 'updatedAt']) ||
+                         // Action: Editing grievance content
+                         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'category', 'description', 'locationName', 'gpsCoordinates', 'isPublic', 'updatedAt'])
+                       );
+
+      allow delete: if isSignedIn() &&
+                       isValidId(grievanceId) &&
+                       resource.data.userId == request.auth.uid;
+    }
+  }
+}

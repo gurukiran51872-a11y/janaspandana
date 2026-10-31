@@ -1,0 +1,6 @@
+{
+  "name": "Janaspandana",
+  "description": "Karnataka Gram Panchayat Civic Grievance & Public Governance Portal",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

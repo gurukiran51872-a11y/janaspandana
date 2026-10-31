@@ -1,0 +1,61 @@
+{
+  "entities": {
+    "Grievance": {
+      "title": "Grievance",
+      "description": "Civic grievance or complaint submitted by a citizen",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique grievance identifier" },
+        "userId": { "type": "string", "description": "Firebase Auth UID of the citizen who registered the complaint" },
+        "authorName": { "type": "string", "description": "Display name of citizen" },
+        "authorEmail": { "type": "string", "description": "Email of citizen" },
+        "title": { "type": "string", "description": "Brief descriptive title of the grievance" },
+        "category": { "type": "string", "description": "Category domain such as Water Supply, Roads, Streetlights, etc." },
+        "description": { "type": "string", "description": "Detailed explanation of the problem" },
+        "status": { "type": "string", "enum": ["Submitted", "Pending", "In Progress", "Resolved"], "description": "Current lifecycle status" },
+        "submittedDate": { "type": "string", "description": "User visible formatted submission date" },
+        "district": { "type": "string", "description": "District administrative boundary" },
+        "taluk": { "type": "string", "description": "Taluk administrative boundary" },
+        "gramPanchayat": { "type": "string", "description": "Target Gram Panchayat authority" },
+        "village": { "type": "string", "description": "Specific village name" },
+        "wardNumber": { "type": "string", "description": "Ward or locality designation" },
+        "locationName": { "type": "string", "description": "Readable landmark reference" },
+        "gpsCoordinates": { "type": "string", "description": "GPS coordinates pinned by citizen" },
+        "isPublic": { "type": "boolean", "description": "Whether complaint is visible in public governance aggregates" },
+        "rating": { "type": "integer", "description": "Citizen rating from 1 to 5" },
+        "feedbackComment": { "type": "string", "description": "Citizen remarks upon resolution" },
+        "assignedOfficer": { "type": "string", "description": "Officer handling the investigation" },
+        "department": { "type": "string", "description": "Government department handling the task" },
+        "expectedResolutionDate": { "type": "string", "description": "Estimated completion date" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp of registration" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp of last status update" }
+      },
+      "required": ["userId", "title", "category", "description", "status", "gramPanchayat", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Citizen profile credentials",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID" },
+        "displayName": { "type": "string", "description": "Full name" },
+        "email": { "type": "string", "description": "Verified Google email" },
+        "phone": { "type": "string", "description": "Contact number" },
+        "gramPanchayat": { "type": "string", "description": "Primary registered Gram Panchayat" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Registration timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Profile update timestamp" }
+      },
+      "required": ["userId", "displayName", "email", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/grievances/{grievanceId}": {
+      "schema": "Grievance",
+      "description": "Civic grievances registered by citizens and monitored by panchayat officials"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Registered citizen profile documents"
+    }
+  }
+}
